@@ -14,142 +14,202 @@
         ::-webkit-scrollbar-track { background: #0c0c0e; }
         ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
         #simCanvas { background-color: #050505; border-radius: 1rem; width: 100%; height: 450px; cursor: crosshair; }
-        .glass-panel { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(63, 63, 70, 0.5); }
+        .glass-panel { background: rgba(24,24,27,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(63,63,70,0.5); }
     </style>
 </head>
 
 <body class="bg-[#0c0c0e] text-zinc-300 font-sans leading-relaxed">
 
-<!-- (HTML BODY CONTENT UNCHANGED — OMITTED FOR BREVITY) -->
-<!-- KEEP EVERYTHING EXACTLY AS YOU HAD IT ABOVE -->
+<nav class="bg-zinc-900 border-b border-zinc-800 shadow-xl sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="text-indigo-500 font-bold text-xl">⚡</span>
+            <span class="text-white font-bold uppercase tracking-tight">Plasma Kinetics Lab</span>
+        </div>
+        <div class="text-[10px] font-mono flex gap-6">
+            <div>
+                <div class="text-zinc-500">CAP_BANK</div>
+                <div class="text-white">1.0 µF</div>
+            </div>
+            <div>
+                <div class="text-zinc-500">SALINITY</div>
+                <div class="text-amber-500">700 µS/cm</div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-10 space-y-12">
+
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="glass-panel p-6 rounded-2xl">
+        <div class="text-[10px] text-zinc-500 uppercase font-bold">Stored Energy</div>
+        <div class="text-3xl font-black text-white">450 J</div>
+    </div>
+    <div class="glass-panel p-6 rounded-2xl">
+        <div class="text-[10px] text-amber-500 uppercase font-bold">Ohmic Loss</div>
+        <div class="text-3xl font-black text-amber-500" id="statLoss">337.5 J</div>
+    </div>
+    <div class="glass-panel p-6 rounded-2xl">
+        <div class="text-[10px] text-indigo-400 uppercase font-bold">Arc Energy</div>
+        <div class="text-3xl font-black text-indigo-400" id="statArc">112.5 J</div>
+    </div>
+    <div class="glass-panel p-6 rounded-2xl">
+        <div class="text-[10px] text-zinc-500 uppercase font-bold">Lag Time</div>
+        <div class="text-3xl font-black text-white" id="statTime">50 µs</div>
+    </div>
+</section>
+
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="lg:col-span-8 glass-panel rounded-3xl p-8">
+        <h2 class="text-white font-bold mb-4">Capacitor Discharge</h2>
+        <div style="height:350px">
+            <canvas id="energyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="lg:col-span-4 glass-panel rounded-3xl p-8">
+        <h3 class="text-white font-bold mb-6">Geometry</h3>
+        <p class="text-xs text-zinc-400">
+            Comparison between flat and 30° conical anode geometry.
+            Field convergence accelerates space-charge formation.
+        </p>
+    </div>
+</section>
+
+<section class="bg-black rounded-3xl border border-zinc-800 overflow-hidden">
+    <div class="grid grid-cols-1 md:grid-cols-4">
+        <div class="p-8 bg-zinc-900/40 border-r border-zinc-800">
+            <h2 class="text-white font-black mb-4">Pulse Sim</h2>
+
+            <div class="space-y-6">
+                <div>
+                    <div class="text-[10px] uppercase text-zinc-500 mb-2">Anode Geometry</div>
+                    <div class="flex gap-2">
+                        <button id="btnBlunt" onclick="setMode('blunt')" class="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded">Flat</button>
+                        <button id="btnConical" onclick="setMode('conical')" class="flex-1 py-2 bg-zinc-700 text-white text-xs font-bold rounded">30° Cone</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] uppercase text-zinc-500">Voltage</div>
+                    <div class="text-2xl font-mono text-indigo-400" id="simVolt">30.0 kV</div>
+                </div>
+
+                <div>
+                    <div class="text-[10px] uppercase text-zinc-500">Heat</div>
+                    <div class="text-2xl font-mono text-amber-500" id="simHeat">0.0 J</div>
+                </div>
+            </div>
+
+            <button id="btnTrigger" class="mt-8 w-full py-4 bg-white text-black font-black rounded-xl">
+                Initiate Pulse
+            </button>
+        </div>
+
+        <div class="md:col-span-3 p-8 flex items-center justify-center">
+            <canvas id="simCanvas"></canvas>
+        </div>
+    </div>
+</section>
+
+</main>
+
+<footer class="text-center text-zinc-600 text-[10px] py-8">
+    Plasma Research Environment
+</footer>
 
 <script>
-    const state = {
-        v0: 30,
-        delay: 50,
-        cap: 1e-6,
-        tau: 72.13,
-        mode: 'blunt',
-        isAnimating: false
-    };
+const state = { v0:30, tau:72.13, delay:50, mode:'blunt', isAnimating:false };
+let chart=null, simCanvas, simCtx, ions=[];
 
-    let energyChartInstance = null;
+function initCharts() {
+    const ctx=document.getElementById('energyChart').getContext('2d');
+    if(chart) chart.destroy();
+    const labels=[...Array(61).keys()];
+    const v=labels.map(t=>t<=state.delay?30*Math.exp(-t/state.tau):null);
+    const e=labels.map(t=>{
+        if(t>state.delay) return null;
+        const vt=30*Math.exp(-t/state.tau);
+        return 0.5*(900-vt*vt);
+    });
+    chart=new Chart(ctx,{
+        type:'line',
+        data:{labels,datasets:[
+            {label:'Voltage (kV)',data:v,borderColor:'#6366f1',borderWidth:2,pointRadius:0},
+            {label:'Energy Loss (J)',data:e,borderColor:'#f59e0b',borderWidth:2,fill:true,backgroundColor:'rgba(245,158,11,0.05)'}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false}
+    });
+}
 
-    function initCharts() {
-        const ctx = document.getElementById('energyChart').getContext('2d');
-        if (energyChartInstance) energyChartInstance.destroy();
+function initSim() {
+    simCanvas=document.getElementById('simCanvas');
+    simCtx=simCanvas.getContext('2d');
+    simCanvas.width=simCanvas.parentElement.clientWidth;
+    simCanvas.height=450;
+    document.getElementById('btnTrigger').onclick=runPulse;
+    drawStage();
+}
 
-        const labels = Array.from({ length: 61 }, (_, i) => i);
-        const vData = labels.map(t => (t <= state.delay) ? 30 * Math.exp(-t / state.tau) : null);
-        const lossData = labels.map(t => {
-            if (t > state.delay) return null;
-            const v = 30 * Math.exp(-t / state.tau);
-            return 0.5 * (900 - v * v);
-        });
+function setMode(m){
+    state.mode=m;
+    state.delay=m==='blunt'?50:22;
+    initCharts();
+    drawStage();
+}
 
-        energyChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels,
-                datasets: [
-                    { label: 'Voltage (kV)', data: vData, borderColor: '#6366f1', borderWidth: 3, pointRadius: 0, yAxisID: 'y' },
-                    { label: 'Energy Loss (J)', data: lossData, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(245,158,11,0.05)', yAxisID: 'y1' }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { color: '#18181b' }, title: { display: true, text: 'Time (µs)' } },
-                    y: { min: 0, max: 35, title: { display: true, text: 'Voltage (kV)' }, grid: { color: '#18181b' } },
-                    y1: { min: 0, max: 450, position: 'right', grid: { display: false }, title: { display: true, text: 'Waste Heat (J)' } }
-                }
-            }
-        });
+function drawStage(){
+    const w=simCanvas.width,h=simCanvas.height;
+    simCtx.fillStyle='#050505';
+    simCtx.fillRect(0,0,w,h);
+    simCtx.fillStyle='#27272a';
+    if(state.mode==='blunt'){
+        simCtx.fillRect(w/2-40,0,80,60);
+    } else {
+        simCtx.beginPath();
+        simCtx.moveTo(w/2-40,0);
+        simCtx.lineTo(w/2+40,0);
+        simCtx.lineTo(w/2,120);
+        simCtx.fill();
     }
+    simCtx.fillRect(w/2-120,h-20,240,20);
+}
 
-    let simCanvas, simCtx, ions = [];
+function runPulse(){
+    if(state.isAnimating) return;
+    state.isAnimating=true;
+    let t=0;
+    ions=[...Array(150)].map(()=>({
+        x:(Math.random()-0.5)*200+simCanvas.width/2,
+        y:Math.random()*(simCanvas.height-120)+80,
+        q:Math.random()>0.5?1:-1
+    }));
 
-    function initSim() {
-        simCanvas = document.getElementById('simCanvas');
-        simCtx = simCanvas.getContext('2d');
-
-        const resize = () => {
-            simCanvas.width = simCanvas.parentElement.clientWidth;
-            simCanvas.height = 450;
-            drawStage();
-        };
-        window.addEventListener('resize', resize);
-        resize();
-
-        document.getElementById('btnTrigger').addEventListener('click', runPulse);
-    }
-
-    function setMode(mode) {
-        state.mode = mode;
-        state.delay = mode === 'blunt' ? 50 : 22;
-        initCharts();
+    function frame(){
         drawStage();
+        const v=30*Math.exp(-t/state.tau);
+        document.getElementById('simVolt').innerText=v.toFixed(1)+' kV';
+        document.getElementById('simHeat').innerText=(0.5*(900-v*v)).toFixed(1)+' J';
+
+        ions.forEach(i=>{
+            i.y+=i.q*(v/30)*3.5;
+            simCtx.fillStyle=i.q>0?'#8b5cf6':'#f59e0b';
+            simCtx.beginPath(); simCtx.arc(i.x,i.y,1.2,0,Math.PI*2); simCtx.fill();
+        });
+
+        t+=0.5;
+        if(t<state.delay) requestAnimationFrame(frame);
+        else { state.isAnimating=false; drawStage(); }
     }
+    frame();
+}
 
-    function drawStage() {
-        const w = simCanvas.width;
-        const h = simCanvas.height;
-        simCtx.fillStyle = '#050505';
-        simCtx.fillRect(0, 0, w, h);
-
-        simCtx.fillStyle = '#27272a';
-        if (state.mode === 'blunt') {
-            simCtx.fillRect(w / 2 - 40, 0, 80, 60);
-        } else {
-            simCtx.beginPath();
-            simCtx.moveTo(w / 2 - 40, 0);
-            simCtx.lineTo(w / 2 + 40, 0);
-            simCtx.lineTo(w / 2, 120);
-            simCtx.fill();
-        }
-        simCtx.fillRect(w / 2 - 120, h - 20, 240, 20);
-    }
-
-    function runPulse() {
-        if (state.isAnimating) return;
-        state.isAnimating = true;
-
-        let t = 0;
-        ions = Array.from({ length: 150 }, () => ({
-            x: (Math.random() - 0.5) * 200 + simCanvas.width / 2,
-            y: Math.random() * (simCanvas.height - 120) + 80,
-            type: Math.random() > 0.5 ? 1 : -1
-        }));
-
-        function frame() {
-            drawStage();
-            const vNow = 30 * Math.exp(-t / state.tau);
-            ions.forEach(ion => {
-                ion.y += ion.type * (vNow / 30) * 3.5;
-                simCtx.fillStyle = ion.type > 0 ? '#8b5cf6' : '#f59e0b';
-                simCtx.beginPath();
-                simCtx.arc(ion.x, ion.y, 1.2, 0, Math.PI * 2);
-                simCtx.fill();
-            });
-
-            t += 0.5;
-            if (t < state.delay) {
-                requestAnimationFrame(frame);
-            } else {
-                state.isAnimating = false;
-                drawStage();
-            }
-        }
-        frame();
-    }
-
-    // ✅ THIS IS THE FIX
-    window.onload = () => {
-        initSim();
-        setMode('blunt');
-        initCharts();
-    };
+window.onload=()=>{
+    initSim();
+    setMode('blunt');
+    initCharts();
+};
 </script>
 
 </body>
