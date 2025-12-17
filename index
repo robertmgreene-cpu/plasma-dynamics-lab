@@ -3,40 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Electrode Geometry & Ionic Drift Analysis</title>
+    <title>Plasma Dynamics Research Lab: 30° Conical Geometry</title>
+    <!-- External Libraries: Tailwind for styling, Chart.js for data viz -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0c0c0e; }
         ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
-        .chart-container { position: relative; width: 100%; height: 320px; margin: 0 auto; }
         #simCanvas { background-color: #050505; border-radius: 1rem; width: 100%; height: 450px; cursor: crosshair; }
-        .typing-dot { width: 4px; height: 4px; background: #6366f1; border-radius: 50%; display: inline-block; animation: typing 1.4s infinite ease-in-out; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-4px); } }
+        .glass-panel { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(63, 63, 70, 0.5); }
     </style>
-    <!-- Chosen Palette: Zinc (Industrial) + Indigo (Electronic) + Amber (Ion Haze) -->
+    <!-- Chosen Palette: Slate (Lab Standard) + Indigo (Electronic) + Amber (Thermal Conduction) -->
     <!-- Application Structure Plan: 
-         1. Geometry Analysis: Comparison between Flat (Blunt) and Pointed tips.
-         2. Ionic Drift Simulator: Restoration of the particle-based drift logic with geometry-specific field mapping.
-         3. Energetic Profile: Real-time calculation of Joules lost (337.5J) vs useful discharge.
-         4. AI Research Node: Rational analysis of the transition to divergent fields. -->
+         1. Energetic Summary: Quantifying the 337.5J loss for the 4mm blunt baseline.
+         2. Comparison: Flat (4mm) vs 30-Degree Cone.
+         3. Kinetic Simulation: Particle-based ionic drift showing convergence at the cone apex.
+         Rationale: This version is optimized for GitHub hosting with all AI API logic removed.
+         The physics focuses on the divergence of the electric field ($E \propto 1/r^2$) for the 30-degree tip. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
-<body class="bg-[#0c0c0e] text-zinc-300 font-sans leading-relaxed">
+<body class="bg-[#0c0c0e] text-zinc-300 font-sans leading-relaxed selection:bg-indigo-500/30">
 
     <nav class="bg-zinc-900 border-b border-zinc-800 shadow-xl sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
             <div class="flex items-center">
-                <span class="text-xl mr-2 text-indigo-500">⚛️</span>
-                <span class="font-bold text-lg tracking-tight text-white uppercase">Plasma <span class="text-indigo-500">Dynamics</span> Lab</span>
+                <span class="text-xl mr-2 text-indigo-500 font-bold">⚡</span>
+                <span class="font-bold text-lg tracking-tight text-white uppercase">Plasma <span class="text-indigo-500">Kinetics</span> Lab</span>
             </div>
             <div class="flex items-center space-x-10 text-[10px] font-mono">
                 <div class="flex flex-col">
-                    <span class="text-zinc-500">GAP_DISTANCE</span>
-                    <span class="text-zinc-100">4.0 mm</span>
+                    <span class="text-zinc-500">CAP_BANK</span>
+                    <span class="text-zinc-100">1.0 µF</span>
                 </div>
                 <div class="flex flex-col">
                     <span class="text-zinc-500">SALINITY</span>
@@ -46,169 +44,148 @@
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-12">
 
-        <!-- Comparative Physics Summary -->
+        <!-- Energetics Metrics -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col justify-center">
+                <h4 class="text-[10px] font-bold text-zinc-500 uppercase mb-1">Stored Energy (t=0)</h4>
+                <div class="text-3xl font-black text-white">450.0 J</div>
+                <p class="text-[10px] text-zinc-600 mt-2">Initial potential at 30.0 kV</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl border-amber-900/30 flex flex-col justify-center">
+                <h4 class="text-[10px] font-bold text-amber-500 uppercase mb-1">Ohmic Bleed Loss</h4>
+                <div class="text-3xl font-black text-amber-500" id="statLoss">337.5 J</div>
+                <p class="text-[10px] text-amber-700 mt-2">Drained before plasma formation</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl border-indigo-900/30 flex flex-col justify-center">
+                <h4 class="text-[10px] font-bold text-indigo-400 uppercase mb-1">Arc Energy</h4>
+                <div class="text-3xl font-black text-indigo-400" id="statArc">112.5 J</div>
+                <p class="text-[10px] text-indigo-700 mt-2">Remaining energy at breakdown</p>
+            </div>
+            <div class="glass-panel p-6 rounded-2xl flex flex-col justify-center">
+                <h4 class="text-[10px] font-bold text-zinc-500 uppercase mb-1">Discharge Time</h4>
+                <div class="text-3xl font-black text-zinc-200" id="statTime">50 µs</div>
+                <p class="text-[10px] text-zinc-500 mt-2">Initiation delay (Lag)</p>
+            </div>
+        </section>
+
+        <!-- Main Charting and Analysis -->
         <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div class="lg:col-span-8 bg-zinc-900/50 rounded-2xl border border-zinc-800 p-8 shadow-sm">
-                <h1 class="text-2xl font-bold text-white mb-4">Geometry-Dependent Breakdown Kinetics</h1>
-                <p class="text-zinc-400 text-sm mb-8 leading-relaxed">
-                    With <strong>Flat (Blunt)</strong> electrodes, the 300A pre-current is distributed across the 4mm face. The 50µs delay is the time needed for ions to build up a significant surface charge density across the entire flat area. With a <strong>Pointed</strong> electrode, the field lines converge, forcing ions into a tiny apex volume, triggering the arc earlier and potentially saving hundreds of Joules.
-                </p>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="p-5 border border-zinc-700 rounded-xl bg-zinc-800/30">
-                        <h4 class="text-xs font-bold text-zinc-300 uppercase mb-3">Fully Blunt (Current)</h4>
-                        <p class="text-[11px] text-zinc-400">Field is roughly uniform. Ionic screening covers the entire electrode face. Initiation is stochastic. Observed delay: 50µs.</p>
-                        <div class="mt-4 text-[10px] text-rose-500 font-mono">Energy Bleed: 337.5 J</div>
-                    </div>
-                    <div class="p-5 border border-indigo-900/50 rounded-xl bg-indigo-900/10">
-                        <h4 class="text-xs font-bold text-indigo-400 uppercase mb-3">Pointed (Proposed)</h4>
-                        <p class="text-[11px] text-zinc-300/80">Field lines converge at the tip. Local E-field spikes instantly. Breakdown triggered at higher voltage (~25kV).</p>
-                        <div class="mt-4 text-[10px] text-indigo-400 font-mono">Est. Energy Bleed: ~110 J</div>
-                    </div>
+            <div class="lg:col-span-8 glass-panel rounded-3xl p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-xl font-bold text-white uppercase tracking-tight">Capacitor Discharge Analysis</h2>
+                    <div class="text-[10px] font-mono px-3 py-1 bg-zinc-800 rounded">RC τ: 72.1 µs</div>
                 </div>
-
-                <div class="mt-8 pt-8 border-t border-zinc-800">
-                    <h3 class="text-sm font-bold text-zinc-500 uppercase mb-4 tracking-widest text-center">Energy partitioning ($V(t)$ Decay)</h3>
-                    <div class="chart-container">
-                        <canvas id="energyChart"></canvas>
-                    </div>
+                <div style="position: relative; width: 100%; height: 350px;">
+                    <canvas id="energyChart"></canvas>
                 </div>
             </div>
 
-            <!-- AI Laboratory Assistant -->
-            <div class="lg:col-span-4 flex flex-col gap-6">
-                <div class="bg-zinc-900 rounded-2xl p-6 border border-zinc-800 shadow-2xl flex-1 flex flex-col h-[480px]">
-                    <div class="flex justify-between items-center mb-6">
-                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Lab AI Assistant</span>
-                        <div id="aiLoading" class="hidden flex gap-1">
-                            <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass-panel rounded-3xl p-8 h-full">
+                    <h3 class="text-sm font-bold text-white uppercase tracking-widest mb-6 pb-2 border-b border-zinc-800">Geometry Impact</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-indigo-400 mb-2">30° Conical Tip</h4>
+                            <p class="text-[11px] text-zinc-400 leading-relaxed">
+                                A 30° taper increases the field enhancement factor ($\beta$) while maintaining electrode longevity. The convergent field funnels ions toward the apex, reaching critical space charge density faster than a flat face.
+                            </p>
                         </div>
-                    </div>
-                    <div id="aiOutput" class="text-xs text-zinc-400 leading-relaxed overflow-y-auto pr-2 space-y-4 flex-1 scrollbar-thin">
-                        Adjust parameters and trigger a pulse to analyze the ionic kinetics.
-                    </div>
-                    <div class="grid grid-cols-1 gap-2 mt-6">
-                        <button onclick="analyzePhysics('geometry')" class="py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-[10px] font-bold uppercase transition shadow-lg">Analyze Divergent Fields</button>
-                        <button onclick="analyzePhysics('thermal')" class="py-3 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-[10px] font-bold uppercase transition border border-zinc-700">Check Thermal Remnant</button>
+                        <div class="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                            <div class="text-[10px] font-bold text-zinc-500 uppercase mb-2">Ionic Current</div>
+                            <div class="text-xl font-mono text-white">~300 A Peak</div>
+                        </div>
+                        <div class="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+                            <div class="text-[10px] font-bold text-zinc-500 uppercase mb-2">Field Divergence</div>
+                            <p class="text-[10px] text-zinc-500 leading-tight">Increased local gradient $\nabla E$ reduces initiation lag.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Ionic Kinetic Visualizer -->
+        <!-- Interactive Simulator -->
         <section class="bg-black rounded-3xl overflow-hidden border border-zinc-800 shadow-2xl">
             <div class="grid grid-cols-1 md:grid-cols-4">
                 <div class="p-8 md:border-r border-zinc-800 bg-zinc-900/40">
-                    <h2 class="text-2xl font-black text-white mb-2">Ionic Pulse Sim</h2>
-                    <p class="text-zinc-500 text-xs mb-10">Real-time simulation of capacitor bleed and ionic transport in high-salinity supercritical fluids.</p>
+                    <h2 class="text-2xl font-black text-white mb-2">Pulse Sim</h2>
+                    <p class="text-zinc-500 text-xs mb-10">4.0mm Gap. Simulating ion transport and heterocharge buildup.</p>
                     
                     <div class="space-y-6">
                         <div class="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                            <label class="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Tip Geometry</label>
+                            <label class="text-[10px] text-zinc-500 uppercase font-bold mb-3 block">Anode Geometry</label>
                             <div class="flex gap-2">
-                                <button onclick="setMode('blunt')" id="btnBlunt" class="flex-1 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase">Flat Blunt</button>
-                                <button onclick="setMode('pointed')" id="btnPointed" class="flex-1 py-2 rounded bg-zinc-700 text-white text-[10px] font-bold uppercase">Pointed</button>
+                                <button onclick="setMode('blunt')" id="btnBlunt" class="flex-1 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase transition">Flat</button>
+                                <button onclick="setMode('conical')" id="btnConical" class="flex-1 py-2 rounded bg-zinc-700 text-white text-[10px] font-bold uppercase transition">30° Cone</button>
                             </div>
                         </div>
 
                         <div class="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                            <div class="flex justify-between text-[10px] font-bold text-zinc-500 mb-2 uppercase">Gap Voltage</div>
+                            <div class="flex justify-between text-[10px] font-bold text-zinc-500 mb-2 uppercase">Capacitor Voltage</div>
                             <div class="text-2xl font-mono text-indigo-400" id="simVolt">30.0 kV</div>
-                            <div class="w-full h-1 bg-zinc-700 rounded mt-2 overflow-hidden">
-                                <div id="simVoltBar" class="h-full bg-indigo-500 transition-all duration-100" style="width: 100%"></div>
+                            <div class="w-full h-1 bg-zinc-700 rounded mt-3 overflow-hidden">
+                                <div id="simVoltBar" class="h-full bg-indigo-500" style="width: 100%"></div>
                             </div>
                         </div>
 
                         <div class="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
-                            <div class="flex justify-between text-[10px] font-bold text-zinc-500 mb-2 uppercase">Energy Loss (Heat)</div>
+                            <div class="flex justify-between text-[10px] font-bold text-zinc-500 mb-2 uppercase">Dissipated Heat</div>
                             <div class="text-2xl font-mono text-amber-500" id="simHeat">0.0 J</div>
                         </div>
                     </div>
 
                     <button id="btnTrigger" class="mt-10 w-full py-5 bg-white text-black rounded-2xl font-black uppercase text-xs hover:bg-zinc-200 transition shadow-2xl active:scale-95">
-                        Initiate Step Pulse
+                        Initiate Pulse
                     </button>
                 </div>
                 <div class="md:col-span-3 p-8 relative flex items-center justify-center">
                     <canvas id="simCanvas"></canvas>
                     <div id="arcFlash" class="absolute inset-0 bg-white opacity-0 transition-opacity pointer-events-none duration-100"></div>
+                    <div class="absolute bottom-6 right-8 text-[9px] font-mono text-zinc-600 uppercase">4.0mm Gap Simulation</div>
                 </div>
             </div>
         </section>
 
     </main>
 
-    <footer class="max-w-7xl mx-auto px-4 py-8 text-center text-zinc-600 text-[10px] uppercase tracking-widest">
-        Plasma Research Synthesis Environment v3.4 | C=1.0µF | R_gap=72.1Ω
+    <footer class="max-w-7xl mx-auto px-4 py-12 text-center text-zinc-700 text-[10px] uppercase tracking-[0.2em] border-t border-zinc-900">
+        Plasma Research Environment | Experimental Data Synthesis
     </footer>
 
     <script>
-        const apiKey = ""; // Managed by environment
         const state = {
-            v0: 30, // kV
-            cap: 1e-6, // 1uF
-            tau: 72.13, // Matches 30kV->15kV drop at 50µs
+            v0: 30, 
+            delay: 50,
+            cap: 1e-6,
+            tau: 72.13, 
             mode: 'blunt',
-            isAnimating: false,
-            delay: 50
+            isAnimating: false
         };
 
-        // --- Gemini Integration ---
-        async function callGemini(payload, retries = 5, delay = 1000) {
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                return await response.json();
-            } catch (e) {
-                if (retries > 0) {
-                    await new Promise(r => setTimeout(r, delay));
-                    return callGemini(payload, retries - 1, delay * 2);
-                }
-                throw e;
-            }
-        }
-
-        async function analyzePhysics(type) {
-            const output = document.getElementById('aiOutput');
-            const loader = document.getElementById('aiLoading');
-            output.innerHTML = "Processing experimental vectors...";
-            loader.classList.remove('hidden');
-
-            const context = `Context: 4mm gap, 1uF bank, 30kV. Saline 700uS/cm. Breakdown observed at 50µs (V=15kV). Comparing Flat-ended 4mm electrodes to a Sharp Point.`;
-            const prompt = type === 'geometry' 
-                ? `${context} Explain why 'Flat' electrodes lead to higher energy loss than 'Pointed' ones. Specifically discuss how the uniform vs divergent field affects the ion accumulation rate at the electrode surface and why the 5% shift from 100 to 300 Bar is a signature of this ion transport limit.`
-                : `${context} Analyze the 337.5J energy loss. If this doesn't lead to boiling (due to 300 Bar pressure), where is the energy going on a molecular level during the ionic conduction phase?`;
-
-            try {
-                const res = await callGemini({ contents: [{ parts: [{ text: prompt }] }] });
-                output.innerHTML = res.candidates[0].content.parts[0].text.replace(/\n/g, '<br>');
-            } catch (e) { output.innerHTML = "Computational link failed."; }
-            finally { loader.classList.add('hidden'); }
-        }
-
-        // --- Charts ---
-        let energyChart;
+        let energyChartInstance = null;
         function initCharts() {
             const ctx = document.getElementById('energyChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (energyChartInstance) {
+                energyChartInstance.destroy();
+            }
+
             const labels = Array.from({length: 61}, (_, i) => i);
-            const vData = labels.map(t => (t <= 50) ? 30 * Math.exp(-t / 72.13) : null);
+            const vData = labels.map(t => (t <= state.delay) ? 30 * Math.exp(-t / 72.13) : null);
             const lossData = labels.map(t => {
-                if (t > 50) return null;
-                const vNow = 30 * Math.exp(-t / 72.13);
-                return 0.5 * (900 - vNow*vNow);
+                if (t > state.delay) return null;
+                const v = 30 * Math.exp(-t / 72.13);
+                return 0.5 * (900 - v*v); 
             });
 
-            energyChart = new Chart(ctx, {
+            energyChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Voltage (kV)', data: vData, borderColor: '#6366f1', borderWidth: 2, pointRadius: 0, yAxisID: 'y' },
+                        { label: 'Voltage (kV)', data: vData, borderColor: '#6366f1', borderWidth: 3, pointRadius: 0, yAxisID: 'y' },
                         { label: 'Energy Loss (J)', data: lossData, borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, fill: true, backgroundColor: 'rgba(245, 158, 11, 0.05)', yAxisID: 'y1' }
                     ]
                 },
@@ -216,16 +193,15 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { color: '#18181b' }, title: { display: true, text: 'Time (µs)' } },
-                        y: { title: { display: true, text: 'Voltage (kV)' }, grid: { color: '#18181b' }, min: 0, max: 35 },
-                        y1: { title: { display: true, text: 'Energy (J)' }, position: 'right', grid: { display: false }, min: 0, max: 450 }
+                        x: { grid: { color: '#18181b' }, title: { display: true, text: 'Time (µs)', color: '#52525b' } },
+                        y: { position: 'left', title: { display: true, text: 'Voltage (kV)', color: '#6366f1' }, grid: { color: '#18181b' }, min: 0, max: 35 },
+                        y1: { position: 'right', title: { display: true, text: 'Waste Heat (J)', color: '#f59e0b' }, grid: { display: false }, min: 0, max: 450 }
                     },
                     plugins: { legend: { labels: { color: '#a1a1aa', font: { size: 10 } } } }
                 }
             });
         }
 
-        // --- Simulation ---
         let simCtx, simCanvas;
         let ions = [];
 
@@ -244,9 +220,20 @@
 
         function setMode(mode) {
             state.mode = mode;
-            state.delay = mode === 'blunt' ? 50 : 12; // Estimate
-            document.getElementById('btnBlunt').className = mode === 'blunt' ? 'flex-1 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase' : 'flex-1 py-2 rounded bg-zinc-700 text-white text-[10px] font-bold uppercase';
-            document.getElementById('btnPointed').className = mode === 'pointed' ? 'flex-1 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase' : 'flex-1 py-2 rounded bg-zinc-700 text-white text-[10px] font-bold uppercase';
+            state.delay = mode === 'blunt' ? 50 : 22; // 30 deg cone estimate
+            
+            // Update UI
+            document.getElementById('btnBlunt').className = mode === 'blunt' ? 'flex-1 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase transition' : 'flex-1 py-2 rounded bg-zinc-800 text-white text-[10px] font-bold uppercase transition';
+            document.getElementById('btnConical').className = mode === 'conical' ? 'flex-1 py-2 rounded bg-indigo-600 text-white text-[10px] font-bold uppercase transition' : 'flex-1 py-2 rounded bg-zinc-800 text-white text-[10px] font-bold uppercase transition';
+            
+            // Update Metrics
+            const vLag = 30 * Math.exp(-state.delay / 72.13);
+            const loss = 0.5 * (900 - vLag * vLag);
+            document.getElementById('statLoss').innerText = loss.toFixed(1) + " J";
+            document.getElementById('statArc').innerText = (450 - loss).toFixed(1) + " J";
+            document.getElementById('statTime').innerText = state.delay + " µs";
+            
+            initCharts(); // Redraw chart with new lag line
             drawStage();
         }
 
@@ -256,17 +243,20 @@
             simCtx.fillStyle = '#050505';
             simCtx.fillRect(0, 0, w, h);
             
-            // Electrodes
             simCtx.fillStyle = '#27272a';
             if (state.mode === 'blunt') {
-                // Fully Blunt (Flat ends)
+                // 4mm Flat blunt
                 simCtx.fillRect(w/2 - 40, 0, 80, 60);
-                simCtx.fillRect(w/2 - 40, h-20, 80, 20);
             } else {
-                // Pointed
-                simCtx.beginPath(); simCtx.moveTo(w/2-5, 0); simCtx.lineTo(w/2+5, 0); simCtx.lineTo(w/2, 100); simCtx.fill();
-                simCtx.fillRect(w/2 - 80, h-20, 160, 20);
+                // 30 degree cone
+                simCtx.beginPath();
+                simCtx.moveTo(w/2 - 40, 0);
+                simCtx.lineTo(w/2 + 40, 0);
+                simCtx.lineTo(w/2, 120); // Longer taper
+                simCtx.fill();
             }
+            // Ground Plane
+            simCtx.fillRect(w/2 - 120, h - 20, 240, 20);
         }
 
         function runPulse() {
@@ -274,15 +264,11 @@
             state.isAnimating = true;
             
             let t = 0;
-            const w = simCanvas.width;
-            const h = simCanvas.height;
-            
-            // Initialize Ions
-            ions = Array.from({length: 180}, () => ({
-                x: (Math.random()-0.5) * (state.mode === 'blunt' ? 80 : 160) + w/2,
-                y: Math.random() * (h-80) + 60,
-                type: Math.random() > 0.5 ? 1 : -1,
-                alpha: 1
+            const dt = 0.5;
+            ions = Array.from({length: 150}, () => ({
+                x: (Math.random()-0.5) * (state.mode === 'blunt' ? 80 : 200) + simCanvas.width/2,
+                y: Math.random() * (simCanvas.height-120) + 80,
+                type: Math.random() > 0.5 ? 1 : -1
             }));
 
             function frame() {
@@ -294,52 +280,39 @@
                 document.getElementById('simVoltBar').style.width = (vNow / 30 * 100) + '%';
                 document.getElementById('simHeat').innerText = currentLoss.toFixed(1) + ' J';
 
-                // Drift Logic
                 ions.forEach(ion => {
-                    let driftX = 0;
-                    let driftY = ion.type * (vNow / 30) * 3.5;
+                    let dx = 0;
+                    let dy = ion.type * (vNow / 30) * 3.5;
                     
-                    if (state.mode === 'pointed') {
-                        // Ions funnel to the tip
-                        const dx = (w/2) - ion.x;
-                        const dy = 100 - ion.y;
-                        const dist = Math.sqrt(dx*dx + dy*dy);
-                        if (dist > 5) {
-                            driftX += (dx/dist) * 2 * (vNow/30);
-                            driftY += (dy/dist) * 2 * (vNow/30);
+                    if (state.mode === 'conical') {
+                        // Ions follow field lines towards the apex
+                        const distToApex = Math.sqrt(Math.pow(simCanvas.width/2 - ion.x, 2) + Math.pow(120 - ion.y, 2));
+                        if (distToApex > 10) {
+                            dx = (simCanvas.width/2 - ion.x) / distToApex * 2.5 * (vNow/30);
+                            dy = (120 - ion.y) / distToApex * 2.5 * (vNow/30);
                         }
                     }
+                    ion.x += dx;
+                    ion.y += dy;
 
-                    ion.x += driftX;
-                    ion.y += driftY;
-
-                    // Boundaries
-                    if (state.mode === 'blunt') {
-                        if (ion.y < 60) ion.y = 60;
-                        if (ion.y > h-20) ion.y = h-20;
-                    } else {
-                        if (ion.y < 100 && Math.abs(ion.x - w/2) < 5) ion.y = 100;
-                        if (ion.y > h-20) ion.y = h-20;
-                    }
+                    const boundaryY = state.mode === 'blunt' ? 60 : 120;
+                    if (ion.y < boundaryY) ion.y = boundaryY;
+                    if (ion.y > simCanvas.height-20) ion.y = simCanvas.height-20;
 
                     simCtx.fillStyle = ion.type > 0 ? '#8b5cf6' : '#f59e0b';
                     simCtx.beginPath(); simCtx.arc(ion.x, ion.y, 1.2, 0, Math.PI * 2); simCtx.fill();
                 });
 
-                t += 0.5;
+                t += dt;
                 if (t < state.delay) {
                     requestAnimationFrame(frame);
                 } else {
-                    // Breakdown Arc
-                    simCtx.strokeStyle = '#fff';
-                    simCtx.lineWidth = 6;
-                    simCtx.shadowBlur = 40;
-                    simCtx.shadowColor = '#6366f1';
+                    simCtx.strokeStyle = '#fff'; simCtx.lineWidth = 6; simCtx.shadowBlur = 40; simCtx.shadowColor = '#6366f1';
                     simCtx.beginPath();
-                    simCtx.moveTo(w/2, state.mode === 'blunt' ? 60 : 100);
-                    let cx = w/2;
-                    for(let y = (state.mode === 'blunt' ? 70 : 110); y < h - 20; y += 20) {
-                        cx += (Math.random() - 0.5) * 40;
+                    simCtx.moveTo(simCanvas.width/2, state.mode === 'blunt' ? 60 : 120);
+                    let cx = simCanvas.width/2;
+                    for(let y = (state.mode === 'blunt' ? 70 : 130); y < simCanvas.height-20; y+=25) {
+                        cx += (Math.random()-0.5)*40;
                         simCtx.lineTo(cx, y);
                     }
                     simCtx.stroke();
@@ -350,7 +323,7 @@
             frame();
         }
 
-        window.onload = () => { initCharts(); initSim(); setMode('blunt'); };
+        window.onload = () => { initSim(); setMode('blunt'); };
     </script>
 </body>
 </html>
